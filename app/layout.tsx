@@ -17,6 +17,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
+  viewportFit: "cover",
   themeColor: "#0f172a",
 };
 
@@ -59,16 +60,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
           </header>
 
-          <main className="flex-1 overflow-x-hidden pb-24 md:pb-0">{children}</main>
+          <main className="flex-1 overflow-x-hidden pb-44 md:pb-0">{children}</main>
 
-          {/* Mobile bottom tab bar */}
-          <nav className="md:hidden fixed bottom-0 inset-x-0 border-t border-[var(--color-border)] bg-white/95 backdrop-blur z-10">
+          {/* Mobile bottom tab bar — respects iPhone home indicator */}
+          <nav className="md:hidden fixed bottom-0 inset-x-0 border-t border-[var(--color-border)] bg-white/95 backdrop-blur z-10 pb-[env(safe-area-inset-bottom)]">
             <div className="grid grid-cols-4">
               {nav.map((n) => (
                 <Link
                   key={n.href}
                   href={n.href}
-                  className="px-2 py-3 text-xs text-center text-[var(--color-ink)] hover:bg-[var(--color-bg)]"
+                  className="px-2 py-3 text-xs text-center text-[var(--color-ink)] active:bg-[var(--color-bg)]"
                 >
                   {n.label}
                 </Link>
