@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+
+  --color-ink: #0f172a;
+  --color-muted: #64748b;
+  --color-border: #e2e8f0;
+  --color-card: #ffffff;
+  --color-bg: #f8fafc;
+
+  --color-pos: #059669;
+  --color-neg: #dc2626;
+  --color-warn: #d97706;
+}
+
+html, body {
+  background: var(--color-bg);
+  color: var(--color-ink);
+}
+
+.mono { font-family: var(--font-mono); }
+
+/* Progress bar track + fill */
+.bar-track {
+  position: relative;
+  background: var(--color-border);
+  border-radius: 999px;
+  height: 6px;
+  overflow: hidden;
+}
+.bar-fill {
+  height: 100%;
+  background: var(--color-ink);
+  transition: width 0.3s;
+}
+.bar-fill.warn  { background: var(--color-warn); }
+.bar-fill.over  { background: var(--color-neg); }
+.bar-fill.ok    { background: var(--color-pos); }
