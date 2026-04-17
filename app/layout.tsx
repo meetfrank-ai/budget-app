@@ -23,7 +23,6 @@ export const viewport: Viewport = {
 
 const nav = [
   { href: "/", label: "Your day" },
-  { href: "/overview", label: "Overview" },
   { href: "/budget", label: "Budget" },
   { href: "/transactions", label: "Transactions" },
 ];
@@ -32,7 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
-        <div className="min-h-screen md:flex">
+        <div className="min-h-dvh md:flex">
           {/* Desktop sidebar */}
           <aside className="hidden md:block w-56 shrink-0 border-r border-[var(--color-border)] bg-white">
             <div className="px-5 py-5 border-b border-[var(--color-border)]">
@@ -64,7 +63,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
           {/* Mobile bottom tab bar — respects iPhone home indicator */}
           <nav className="md:hidden fixed bottom-0 inset-x-0 border-t border-[var(--color-border)] bg-white/95 backdrop-blur z-10 pb-[env(safe-area-inset-bottom)]">
-            <div className="grid grid-cols-4">
+            <div className="grid grid-cols-3">
               {nav.map((n) => (
                 <Link
                   key={n.href}

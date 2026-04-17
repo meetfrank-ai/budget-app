@@ -82,8 +82,7 @@ export async function lockInAction(formData: FormData) {
     .is("completed_at", null);
 
   revalidatePath("/");
-  revalidatePath("/overview");
-  redirect("/overview");
+  redirect("/");
 }
 
 /**

@@ -18,6 +18,17 @@
 html, body {
   background: var(--color-bg);
   color: var(--color-ink);
+  min-height: 100dvh;
+  /* Avoid iOS bounce-scroll showing white under the tab bar in standalone PWA. */
+  overscroll-behavior-y: none;
+}
+
+/* Safe-area padding on the body so nothing ever falls under the iPhone notch
+   or home indicator in standalone PWA mode. */
+body {
+  padding-top: env(safe-area-inset-top);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
 }
 
 .mono { font-family: var(--font-mono); }
