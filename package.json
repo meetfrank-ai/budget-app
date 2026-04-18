@@ -1,13 +1,13 @@
 {
   "name": "budget-app",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Personal budgeting and daily review app",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "typecheck": "tsc --noEmit --incremental false",
+    "lint": "pnpm typecheck"
   },
   "keywords": [],
   "author": "",

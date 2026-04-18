@@ -2,6 +2,8 @@
 
 Written overnight 17 Apr 2026. Here's what happened and what to click.
 
+Current note: this is a historical handoff snapshot. The live app now centers on three main routes (`/`, `/budget`, `/transactions`), and the morning cron script already calls `runSync()` before sending the review email.
+
 ## Status: working app running on your Mac
 
 The Next.js dev server is **still running in the background**. Open http://localhost:3000 in your browser right now to see it. (If the terminal got closed, restart from `/Users/lynettedup/budget-app` with `pnpm dev`.)

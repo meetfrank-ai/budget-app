@@ -4,11 +4,11 @@ Parked 17 Apr 2026 evening. Pick this up in the next session.
 
 ## The gap
 
-The 8am cloud notification can't reliably say "X transactions waiting" **unless the Gmail→Supabase sync runs in the cloud first**. Today's setup:
+The remaining 8am cloud gap is mostly deployment and verification, not app code. Today's setup:
 
 - **20:00 sync** runs via launchd on Lynette's Mac (`com.lynette.budget-sync`). Good when her Mac is awake, silent when it's off.
-- **8am email cron** (not yet created) would read Supabase and email her.
-- If Mac was off overnight → Supabase stale → email says "nothing pending" even though her inbox has transactions.
+- **8am email cron script** exists in `cron/morning.mjs` and already calls `runSync()` before checking pending reviews.
+- If the Render cron job or env vars are missing, the cloud notification can still lag behind reality.
 
 ## Plan
 
@@ -46,7 +46,7 @@ await checkPendingAndEmail(); // existing
 
 ### 3. Create the Render Cron Job
 
-Via API (`rnd_mrloKsj1hBuHub1xevR3uc2BTHE6`):
+Via the Render dashboard or API using your own account credentials:
 
 ```json
 {
@@ -68,9 +68,9 @@ Via API (`rnd_mrloKsj1hBuHub1xevR3uc2BTHE6`):
 
 Env vars:
 - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_USER_ID`
-- `RESEND_API_KEY` = `re_cNush87s_BpyHHHgC6dTMVhqosqs8gctR`
-- `REVIEW_TO_EMAIL` = `lynetteduplessis@meetfrank.ai`
-- `REVIEW_APP_URL` = `https://budget-app-5arn.onrender.com`
+- `RESEND_API_KEY`
+- `REVIEW_TO_EMAIL`
+- `REVIEW_APP_URL`
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN`
 
 ### 4. Smoke test
@@ -102,12 +102,26 @@ Once cloud sync is reliable for 3 days, remove `com.lynette.budget-sync` launchd
    - Tone: same dry voice, more strategic. Comments on which categories are tracking well, which are silently bleeding, whether the plan still fits the pattern.
    - Trigger: on the morning cron after the daily roast generates, OR lazily on first /budget visit each day.
 
+## Setup hardening (next pass)
+
+1. **Add a real ESLint setup.**
+   - Replace the temporary `pnpm lint -> pnpm typecheck` alias with an explicit ESLint config that works cleanly with Next 15.
+   - Add `eslint`, `eslint-config-next`, and a committed config file so linting is non-interactive in local dev and CI.
+
+2. **Make review-date calculations timezone-safe.**
+   - Replace `toISOString().slice(0, 10)` for "today" and "yesterday" with one shared local-date helper.
+   - Use the same helper across the app pages, review helpers, and cron code so the day boundary is stable in SAST and on Render.
+
+3. **Add one build-level verification check.**
+   - Run `next build` in CI or a deploy check so route metadata, server actions, and app-router behavior are validated before push/deploy.
+   - Keep `typecheck` as the quick local signal, but add one higher-fidelity guardrail.
+
 ## What's already done tonight
 
 - Mobile polish: sticky Lock-in above tab bar, safe-area-inset for iPhone home indicator, viewport-fit=cover, full-width lock button, PWA manifest.
 - Resend API key in hand (saved in env vars below — don't commit plaintext).
 - Render web service live at https://budget-app-5arn.onrender.com.
-- `cron/morning.mjs` written (email-only for now — no sync call yet).
+- `cron/morning.mjs` written and already wired to call `runSync()` before checking pending reviews.
 
 ## What NOT to do tomorrow
 

@@ -6,6 +6,9 @@ export const metadata: Metadata = {
   title: "Budget",
   description: "Personal budget",
   manifest: "/manifest.webmanifest",
+  icons: {
+    icon: "/icon.svg",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",

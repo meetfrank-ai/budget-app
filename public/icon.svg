@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Budget App Icon</title>
+  <desc id="desc">A simple wallet icon for the Budget app.</desc>
+  <rect width="512" height="512" rx="112" fill="#0f172a"/>
+  <rect x="88" y="148" width="336" height="216" rx="44" fill="#f8fafc"/>
+  <rect x="280" y="198" width="164" height="116" rx="28" fill="#cbd5e1"/>
+  <circle cx="360" cy="256" r="18" fill="#059669"/>
+  <path d="M144 252c0-26.51 21.49-48 48-48h46c26.51 0 48 21.49 48 48s-21.49 48-48 48h-46v44h-48V252Zm48 0v0h46c0-0.01 0-0.01 0-0.01S238 252 238 252Z" fill="#0f172a"/>
+</svg>
