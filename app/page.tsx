@@ -160,7 +160,6 @@ async function OverviewState() {
   const daysInMonth = new Date(year, month, 0).getDate();
   const dayOfMonth = now.getDate();
   const paceDelta = monthPct - (dayOfMonth / daysInMonth) * 100;
-  const canaries = budget.filter((b) => b.pct_used != null && b.pct_used >= 100 && b.planned > 0);
   const monthName = new Date(year, month - 1, 1).toLocaleDateString("en-ZA", { month: "long" });
 
   return (
@@ -213,18 +212,6 @@ async function OverviewState() {
           </div>
         </div>
       </section>
-
-      {canaries.length > 0 && (
-        <div className="mt-4 rounded-xl border border-[var(--color-neg)]/30 bg-red-50/40 p-4">
-          <div className="text-sm font-medium text-[var(--color-neg)] mb-1">
-            {canaries.length} over budget
-          </div>
-          <div className="text-xs text-[var(--color-muted)]">
-            {canaries.slice(0, 3).map((c) => c.category_name).join(" · ")}
-            {canaries.length > 3 ? ` · +${canaries.length - 3} more` : ""}
-          </div>
-        </div>
-      )}
 
       {/* CTA */}
       <div className="mt-8 flex items-center justify-center">
