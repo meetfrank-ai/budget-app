@@ -27,8 +27,9 @@ function isReviewable(t: Transaction): boolean {
 }
 
 export async function resolveReviewTarget(): Promise<string> {
-  // Grab transactions in the last 14 days; pick the most recent reviewable
-  // day before today.
+  // Most recent date (≤ yesterday) that still has any unreviewed transactions.
+  // We deliberately ignore daily_reviews lock state here: if a late transaction
+  // arrived after she locked in, that day is back in review territory.
   const since = new Date();
   since.setDate(since.getDate() - 14);
   const recent = await queries.transactions({
@@ -36,22 +37,12 @@ export async function resolveReviewTarget(): Promise<string> {
     until: yesterdayISO(),
     limit: 500,
   });
-  const reviewable = recent.filter(isReviewable);
-  if (reviewable.length === 0) return yesterdayISO();
-
-  const sb = supabaseServer();
-  const dates = Array.from(new Set(reviewable.map((t) => t.occurred_on))).sort().reverse();
-  const { data: locks } = await sb
-    .from("daily_reviews")
-    .select("review_date, completed_at")
-    .eq("user_id", USER_ID)
-    .in("review_date", dates);
-  const locked = new Set((locks ?? []).filter((l: any) => l.completed_at).map((l: any) => l.review_date));
-
-  for (const d of dates) {
-    if (!locked.has(d)) return d;
+  const unreviewed = recent.filter((t) => isReviewable(t) && !t.reviewed_at);
+  if (unreviewed.length > 0) {
+    const dates = Array.from(new Set(unreviewed.map((t) => t.occurred_on))).sort();
+    return dates[dates.length - 1]; // most recent
   }
-  // Nothing unlocked → fall back to yesterday.
+  // Nothing pending → return yesterday so home shows "locked" overview state.
   return yesterdayISO();
 }
 
@@ -119,13 +110,35 @@ export async function getOrCreateDraftReview(targetDate: string): Promise<{
 }> {
   const sb = supabaseServer();
 
+  // Are there pending (unreviewed) transactions for this date right now?
+  const { count: pendingCount } = await sb
+    .from("transactions")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", USER_ID)
+    .eq("occurred_on", targetDate)
+    .is("reviewed_at", null)
+    .eq("status", "Completed")
+    .neq("tx_type", "Transfer");
+  const hasPending = (pendingCount ?? 0) > 0;
+
   const { data: existing } = await sb
     .from("daily_reviews")
     .select("review_date, completed_at, total_zar, transaction_count, roast")
     .eq("user_id", USER_ID)
     .eq("review_date", targetDate)
     .maybeSingle();
-  if (existing) {
+
+  // Reopen case: row is locked but a late-arriving transaction has reset the
+  // pending count above zero. Clear completed_at + regenerate roast against the
+  // refreshed transaction set so the review screen reflects reality.
+  if (existing && existing.completed_at && hasPending) {
+    await sb
+      .from("daily_reviews")
+      .update({ completed_at: null, roast: null })
+      .eq("user_id", USER_ID)
+      .eq("review_date", targetDate);
+    // Fall through to the regeneration path below.
+  } else if (existing) {
     return {
       roast: existing.roast ?? null,
       isLocked: !!existing.completed_at,

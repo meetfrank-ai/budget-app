@@ -74,12 +74,13 @@ export async function lockInAction(formData: FormData) {
   // Finalise the daily_reviews row. If none exists, create one (shouldn't
   // happen since the page generates a draft on first view).
   const now = new Date().toISOString();
+  // Always set completed_at (re-locking after a late-arriving transaction is
+  // a real path — see lib/review.ts reopen logic).
   await sb
     .from("daily_reviews")
     .update({ completed_at: now })
     .eq("user_id", USER_ID)
-    .eq("review_date", date)
-    .is("completed_at", null);
+    .eq("review_date", date);
 
   revalidatePath("/");
   redirect("/");
