@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { queries } from "@/lib/queries";
 import { zar, zarRound, pct, monthLabel } from "@/lib/format";
+import { generateBudgetCommentary } from "@/lib/roast";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -28,6 +29,17 @@ export default async function BudgetPage({
   const totalActual = rows.reduce((s, r) => s + r.actual_net, 0);
   const totalRemaining = totalPlanned - totalActual;
 
+  // AI commentary — only for the current month (historical months get a blank slate)
+  const isCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1;
+  const commentary = isCurrentMonth
+    ? await generateBudgetCommentary({
+        budget: rows,
+        monthName: monthLabel(year, month),
+        daysInMonth: new Date(year, month, 0).getDate(),
+        dayOfMonth: now.getDate(),
+      })
+    : null;
+
   const prevLink = `/budget?y=${month === 1 ? year - 1 : year}&m=${month === 1 ? 12 : month - 1}`;
   const nextLink = `/budget?y=${month === 12 ? year + 1 : year}&m=${month === 12 ? 1 : month + 1}`;
 
@@ -47,6 +59,13 @@ export default async function BudgetPage({
           </Link>
         </div>
       </div>
+
+      {/* Commentary — current month only */}
+      {commentary && (
+        <div className="rounded-xl border border-[var(--color-border)] bg-white p-5 mb-6">
+          <div className="text-sm leading-relaxed whitespace-pre-wrap">{commentary}</div>
+        </div>
+      )}
 
       {/* Summary */}
       <div className="grid grid-cols-3 gap-4 mb-8">

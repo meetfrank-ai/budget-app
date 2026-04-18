@@ -178,6 +178,18 @@ export async function getOrCreateDraftReview(targetDate: string): Promise<{
   const monthActual = budget.reduce((s, b) => s + b.actual_net, 0);
   const monthPlanned = budget.reduce((s, b) => s + b.planned, 0);
 
+  // Per-category yesterday delta (for the punchier daily roast)
+  const dayDeltaByCat: Record<string, number> = {};
+  for (const t of reviewable) {
+    if (!t.category_id) continue;
+    const sign = t.tx_type === "Refund" ? -1 : 1;
+    dayDeltaByCat[t.category_id] = (dayDeltaByCat[t.category_id] ?? 0) + Number(t.amount_zar) * sign;
+  }
+  const movedYesterday = budget
+    .filter((b) => dayDeltaByCat[b.category_id] != null)
+    .map((b) => ({ name: b.category_name, dayDelta: dayDeltaByCat[b.category_id], row: b }))
+    .sort((a, b) => b.dayDelta - a.dayDelta);
+
   const roast = await generateRoast({
     reviewDate: targetDate,
     daySpend,
@@ -189,6 +201,7 @@ export async function getOrCreateDraftReview(targetDate: string): Promise<{
     topCategories,
     overBudget,
     underBudget,
+    movedYesterday,
   });
 
   await sb.from("daily_reviews").upsert(

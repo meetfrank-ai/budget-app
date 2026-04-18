@@ -89,19 +89,6 @@ Once cloud sync is reliable for 3 days, remove `com.lynette.budget-sync` launchd
 - **UI refinement:** move the Affected-categories preview from the Review page onto the Overview screen; drop `/overview` from nav (review + overview are two screens of one flow, not two tabs). Noted from earlier instruction, superseded by tonight's pivot to 8am plumbing. Pick up after cloud sync is green.
 - **Adhoc tag** (`docs/future-features.md` item 1b) — now scoped, just needs building.
 
-## Roast / overview improvements (next pass)
-
-1. **Make the daily roast punchier and more focused on changed categories.**
-   - Right now the roast covers monthly position broadly. Lynette wants it to lead with what changed yesterday — which categories moved, which crossed thresholds.
-   - Edit the `lib/roast.ts` system prompt: "Lead with the categories that moved most yesterday. Mention monthly pace only if it's notably off. Aim for 2-3 sentences, not 4-5."
-   - Pre-compute the per-category delta for the day before sending to Claude — pass it as structured input rather than letting Claude reason from totals.
-
-2. **AI overview on the Budget tab.**
-   - Generate a separate, longer-form roast for the whole budget — runs once per day, cached on a new `monthly_reviews` row keyed by (user_id, year, month).
-   - Surface it at the top of `/budget` when she opens it.
-   - Tone: same dry voice, more strategic. Comments on which categories are tracking well, which are silently bleeding, whether the plan still fits the pattern.
-   - Trigger: on the morning cron after the daily roast generates, OR lazily on first /budget visit each day.
-
 ## Setup hardening (next pass)
 
 1. **Add a real ESLint setup.**

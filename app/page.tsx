@@ -162,36 +162,26 @@ async function OverviewState() {
   const paceDelta = monthPct - (dayOfMonth / daysInMonth) * 100;
   const monthName = new Date(year, month - 1, 1).toLocaleDateString("en-ZA", { month: "long" });
 
+  const dayLabel = niceLabel(dr.review_date);
+  const daySpend = Number(dr.total_zar ?? 0);
+  const dayCount = dr.transaction_count ?? 0;
+
   return (
     <div className="px-4 md:px-8 py-6 md:py-8 max-w-2xl">
       <div className="text-xs uppercase tracking-wide text-[var(--color-muted)]">Overview</div>
       <h1 className="text-2xl font-semibold tracking-tight mt-1">
-        {niceLabel(dr.review_date).replace(/^\w/, (c) => c.toUpperCase())}, locked in
+        {dayLabel.replace(/^\w/, (c) => c.toUpperCase())}, locked in
       </h1>
 
-      {/* Roast */}
-      {dr.roast && (
-        <div className="mt-5 rounded-xl border border-[var(--color-border)] bg-white p-5">
-          <div className="text-sm leading-relaxed whitespace-pre-wrap">{dr.roast}</div>
-        </div>
-      )}
-
-      {/* Affected categories — where this locked day lands in the month */}
-      {affected.length > 0 && (
-        <section className="mt-6">
-          <div className="text-xs uppercase tracking-wide text-[var(--color-muted)] mb-2">
-            Where it landed
-          </div>
-          <ul className="space-y-2">
-            {affected.map((c) => <AffectedCategoryRow key={c.category_id} row={c} />)}
-          </ul>
-        </section>
-      )}
-
-      {/* Month summary */}
-      <section className="mt-6 grid grid-cols-3 gap-3">
+      {/* Pills at the top — at-a-glance day + month state */}
+      <section className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="rounded-xl border border-[var(--color-border)] bg-white p-4">
-          <div className="text-xs uppercase tracking-wide text-[var(--color-muted)]">Spent</div>
+          <div className="text-xs uppercase tracking-wide text-[var(--color-muted)]">Spent {dayLabel}</div>
+          <div className="mono text-lg font-medium mt-1">{zarRound(daySpend)}</div>
+          <div className="text-xs text-[var(--color-muted)] mt-0.5">{dayCount} transactions</div>
+        </div>
+        <div className="rounded-xl border border-[var(--color-border)] bg-white p-4">
+          <div className="text-xs uppercase tracking-wide text-[var(--color-muted)]">Spent month</div>
           <div className="mono text-lg font-medium mt-1">{zarRound(totalActual)}</div>
           <div className="text-xs text-[var(--color-muted)] mt-0.5">of {zarRound(totalPlanned)}</div>
         </div>
@@ -212,6 +202,25 @@ async function OverviewState() {
           </div>
         </div>
       </section>
+
+      {/* Roast */}
+      {dr.roast && (
+        <div className="mt-6 rounded-xl border border-[var(--color-border)] bg-white p-5">
+          <div className="text-sm leading-relaxed whitespace-pre-wrap">{dr.roast}</div>
+        </div>
+      )}
+
+      {/* Affected categories — where this locked day lands in the month */}
+      {affected.length > 0 && (
+        <section className="mt-6">
+          <div className="text-xs uppercase tracking-wide text-[var(--color-muted)] mb-2">
+            Where it landed
+          </div>
+          <ul className="space-y-2">
+            {affected.map((c) => <AffectedCategoryRow key={c.category_id} row={c} />)}
+          </ul>
+        </section>
+      )}
 
       {/* CTA */}
       <div className="mt-8 flex items-center justify-center">
