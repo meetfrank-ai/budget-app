@@ -1,9 +1,14 @@
 /**
  * Morning review nudge — runs at 08:00 SAST (06:00 UTC) via Render Cron Job.
- * If yesterday has unreviewed transactions, emails Lynette a link to lock in.
+ *
+ * Pipeline:
+ *  1. runSync() — pull new Gmail transactions, parse, categorise, insert.
+ *  2. Count yesterday's unreviewed.
+ *  3. If >0, email Lynette a link to lock in.
  *
  * Env vars:
  *  - SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_USER_ID
+ *  - GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN  (sync)
  *  - RESEND_API_KEY          — sender auth
  *  - REVIEW_TO_EMAIL         — where to send the nudge
  *  - REVIEW_FROM_EMAIL       — sender, e.g. "Budget <onboarding@resend.dev>"
@@ -12,6 +17,7 @@
  * Exits 0 on success OR "nothing to review" (no notification needed).
  * Exits 1 on real failure so Render's dashboard shows the error.
  */
+import { runSync } from "./sync.mjs";
 
 const {
   SUPABASE_URL,
@@ -87,6 +93,14 @@ async function sendEmail({ subject, html }) {
 }
 
 async function main() {
+  // 1. Pull Gmail → Supabase first so the count we send is current.
+  try {
+    const r = await runSync();
+    console.log(`[morning] sync: parsed=${r.parsed} inserted=${r.inserted} skipped=${r.skipped} errors=${r.errors}`);
+  } catch (e) {
+    console.error("[morning] sync failed, continuing with stale Supabase state:", e.message);
+  }
+
   const date = yesterdayISO();
   const pending = await countPending(date);
 
