@@ -65,7 +65,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <main className="flex-1 overflow-x-hidden pb-44 md:pb-0">{children}</main>
 
           {/* Mobile bottom tab bar — respects iPhone home indicator */}
-          <nav className="md:hidden fixed bottom-0 inset-x-0 border-t border-[var(--color-border)] bg-white/95 backdrop-blur z-10 pb-[env(safe-area-inset-bottom)]">
+          <nav className="md:hidden fixed bottom-0 inset-x-0 glass-tab z-10 pb-[env(safe-area-inset-bottom)]">
             <div className="grid grid-cols-3">
               {nav.map((n) => (
                 <Link
