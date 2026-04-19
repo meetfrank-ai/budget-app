@@ -1,35 +1,69 @@
 import Link from "next/link";
-import { queries } from "@/lib/queries";
-import { zar, zarRound, pct, monthLabel } from "@/lib/format";
+import { queries, type BudgetRow } from "@/lib/queries";
+import { zarRound, pct, monthLabel } from "@/lib/format";
 import { generateBudgetCommentary } from "@/lib/roast";
+import { BudgetCategoryCard } from "./BudgetCategoryCard";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-function barTone(pctUsed: number | null): "ok" | "warn" | "over" {
-  if (pctUsed == null) return "ok";
-  if (pctUsed >= 100) return "over";
-  if (pctUsed >= 80) return "warn";
-  return "ok";
+type SortKey = "name" | "planned" | "actual" | "remaining" | "burn";
+type SortDir = "asc" | "desc";
+
+const VALID_SORTS: SortKey[] = ["name", "planned", "actual", "remaining", "burn"];
+
+function sortRows(rows: BudgetRow[], key: SortKey, dir: SortDir): BudgetRow[] {
+  const out = [...rows].sort((a, b) => {
+    let cmp = 0;
+    switch (key) {
+      case "name":
+        cmp = a.category_name.localeCompare(b.category_name);
+        break;
+      case "planned":
+        cmp = a.planned - b.planned;
+        break;
+      case "actual":
+        cmp = a.actual_net - b.actual_net;
+        break;
+      case "remaining":
+        cmp = a.planned - a.actual_net - (b.planned - b.actual_net);
+        break;
+      case "burn":
+        cmp = (a.pct_used ?? 0) - (b.pct_used ?? 0);
+        break;
+    }
+    return dir === "asc" ? cmp : -cmp;
+  });
+  return out;
 }
 
 export default async function BudgetPage({
   searchParams,
 }: {
-  searchParams: Promise<{ y?: string; m?: string }>;
+  searchParams: Promise<{ y?: string; m?: string; sort?: string; dir?: string }>;
 }) {
   const params = await searchParams;
   const now = new Date();
   const year = parseInt(params.y ?? String(now.getFullYear()));
   const month = parseInt(params.m ?? String(now.getMonth() + 1));
 
-  const rows = await queries.monthBudget(year, month);
+  const sortKey: SortKey = (VALID_SORTS.includes(params.sort as SortKey)
+    ? params.sort
+    : "planned") as SortKey;
+  const sortDir: SortDir = params.dir === "asc" ? "asc" : "desc";
+
+  const [rowsRaw, monthTransactions] = await Promise.all([
+    queries.monthBudget(year, month),
+    queries.transactions({ year, month, limit: 500 }),
+  ]);
+
+  const rows = sortRows(rowsRaw, sortKey, sortDir);
 
   const totalPlanned = rows.reduce((s, r) => s + r.planned, 0);
   const totalActual = rows.reduce((s, r) => s + r.actual_net, 0);
   const totalRemaining = totalPlanned - totalActual;
+  const spentPctNum = totalPlanned > 0 ? (totalActual / totalPlanned) * 100 : 0;
 
-  // AI commentary — only for the current month (historical months get a blank slate)
   const isCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1;
   const commentary = isCurrentMonth
     ? await generateBudgetCommentary({
@@ -40,8 +74,28 @@ export default async function BudgetPage({
       })
     : null;
 
-  const prevLink = `/budget?y=${month === 1 ? year - 1 : year}&m=${month === 1 ? 12 : month - 1}`;
-  const nextLink = `/budget?y=${month === 12 ? year + 1 : year}&m=${month === 12 ? 1 : month + 1}`;
+  const buildHref = (overrides: Partial<{ y: number; m: number; sort: SortKey; dir: SortDir }>) => {
+    const q = new URLSearchParams();
+    q.set("y", String(overrides.y ?? year));
+    q.set("m", String(overrides.m ?? month));
+    q.set("sort", overrides.sort ?? sortKey);
+    q.set("dir", overrides.dir ?? sortDir);
+    return `/budget?${q.toString()}`;
+  };
+
+  const prevLink = buildHref({
+    y: month === 1 ? year - 1 : year,
+    m: month === 1 ? 12 : month - 1,
+  });
+  const nextLink = buildHref({
+    y: month === 12 ? year + 1 : year,
+    m: month === 12 ? 1 : month + 1,
+  });
+
+  const sortHref = (key: SortKey): string => {
+    const nextDir: SortDir = sortKey === key ? (sortDir === "desc" ? "asc" : "desc") : "desc";
+    return buildHref({ sort: key, dir: nextDir });
+  };
 
   return (
     <div className="px-4 md:px-8 py-6 md:py-8 max-w-6xl">
@@ -60,80 +114,137 @@ export default async function BudgetPage({
         </div>
       </div>
 
+      {/* Summary pills — above commentary */}
+      <div className="grid grid-cols-3 gap-2 md:gap-4 mb-4 md:mb-6">
+        <SummaryCard label="Planned" value={zarRound(totalPlanned)} />
+        <SummaryCard
+          label="Actual"
+          value={zarRound(totalActual)}
+          note={`${pct(spentPctNum)} of plan`}
+        />
+        <SummaryCard
+          label="Remaining"
+          value={zarRound(totalRemaining)}
+          tone={totalRemaining < 0 ? "neg" : "pos"}
+        />
+      </div>
+
       {/* Commentary — current month only */}
       {commentary && (
-        <div className="rounded-xl border border-[var(--color-border)] bg-white p-5 mb-6">
+        <div className="rounded-xl border border-[var(--color-border)] bg-white p-4 md:p-5 mb-6">
           <div className="text-sm leading-relaxed whitespace-pre-wrap">{commentary}</div>
         </div>
       )}
 
-      {/* Summary */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
-        <div className="rounded-xl border border-[var(--color-border)] bg-white p-5">
-          <div className="text-xs uppercase tracking-wide text-[var(--color-muted)]">Planned</div>
-          <div className="mono text-2xl font-medium mt-2">{zarRound(totalPlanned)}</div>
+      {/* Category list with sort headers */}
+      <div className="rounded-xl border border-[var(--color-border)] bg-white overflow-hidden">
+        {/* Desktop sort header row */}
+        <div className="hidden md:grid md:grid-cols-[1fr_104px_104px_104px_1fr_16px] md:items-center md:gap-4 px-5 py-2.5 bg-[var(--color-bg)] text-xs uppercase tracking-wide text-[var(--color-muted)] border-b border-[var(--color-border)]">
+          <SortHeader label="Category" active={sortKey === "name"} dir={sortDir} href={sortHref("name")} />
+          <SortHeader label="Planned" align="right" active={sortKey === "planned"} dir={sortDir} href={sortHref("planned")} />
+          <SortHeader label="Actual" align="right" active={sortKey === "actual"} dir={sortDir} href={sortHref("actual")} />
+          <SortHeader label="Remaining" align="right" active={sortKey === "remaining"} dir={sortDir} href={sortHref("remaining")} />
+          <SortHeader label="Burn" active={sortKey === "burn"} dir={sortDir} href={sortHref("burn")} />
+          <span />
         </div>
-        <div className="rounded-xl border border-[var(--color-border)] bg-white p-5">
-          <div className="text-xs uppercase tracking-wide text-[var(--color-muted)]">Actual (net)</div>
-          <div className="mono text-2xl font-medium mt-2">{zarRound(totalActual)}</div>
-          <div className="text-xs text-[var(--color-muted)] mt-1">
-            {pct((totalActual / totalPlanned) * 100)} of plan
-          </div>
-        </div>
-        <div className="rounded-xl border border-[var(--color-border)] bg-white p-5">
-          <div className="text-xs uppercase tracking-wide text-[var(--color-muted)]">Remaining</div>
-          <div className={`mono text-2xl font-medium mt-2 ${totalRemaining < 0 ? "text-[var(--color-neg)]" : "text-[var(--color-pos)]"}`}>
-            {zarRound(totalRemaining)}
-          </div>
-        </div>
-      </div>
 
-      {/* Category list */}
-      <div className="rounded-xl border border-[var(--color-border)] bg-white overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-[var(--color-bg)] text-left text-xs uppercase tracking-wide text-[var(--color-muted)]">
-            <tr>
-              <th className="px-5 py-3 font-normal">Category</th>
-              <th className="px-5 py-3 font-normal text-right">Planned</th>
-              <th className="px-5 py-3 font-normal text-right">Actual</th>
-              <th className="px-5 py-3 font-normal text-right">Remaining</th>
-              <th className="px-5 py-3 font-normal w-48">Burn</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[var(--color-border)]">
-            {rows.map((r) => {
-              const remaining = r.planned - r.actual_net;
-              const tone = barTone(r.pct_used);
-              const fillPct = Math.min(100, r.pct_used ?? 0);
-              return (
-                <tr key={r.category_id}>
-                  <td className="px-5 py-3 font-medium">{r.category_name}</td>
-                  <td className="px-5 py-3 text-right mono text-[var(--color-muted)]">{zarRound(r.planned)}</td>
-                  <td className={`px-5 py-3 text-right mono ${tone === "over" ? "text-[var(--color-neg)]" : ""}`}>
-                    {zarRound(r.actual_net)}
-                    {r.actual_refund > 0 && (
-                      <span className="text-xs text-[var(--color-muted)] ml-1">(−{zarRound(r.actual_refund)} refund)</span>
-                    )}
-                  </td>
-                  <td className={`px-5 py-3 text-right mono ${remaining < 0 ? "text-[var(--color-neg)]" : "text-[var(--color-muted)]"}`}>
-                    {zarRound(remaining)}
-                  </td>
-                  <td className="px-5 py-3">
-                    <div className="flex items-center gap-2">
-                      <div className="bar-track flex-1">
-                        <div className={`bar-fill ${tone}`} style={{ width: `${fillPct}%` }} />
-                      </div>
-                      <div className="mono text-xs text-[var(--color-muted)] w-10 text-right">
-                        {pct(r.pct_used)}
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        {/* Mobile sort pill bar */}
+        <div className="md:hidden flex gap-1.5 overflow-x-auto px-3 py-2 border-b border-[var(--color-border)] bg-[var(--color-bg)]">
+          <MobileSortPill label="Name" active={sortKey === "name"} dir={sortDir} href={sortHref("name")} />
+          <MobileSortPill label="Planned" active={sortKey === "planned"} dir={sortDir} href={sortHref("planned")} />
+          <MobileSortPill label="Actual" active={sortKey === "actual"} dir={sortDir} href={sortHref("actual")} />
+          <MobileSortPill label="Remaining" active={sortKey === "remaining"} dir={sortDir} href={sortHref("remaining")} />
+          <MobileSortPill label="Burn" active={sortKey === "burn"} dir={sortDir} href={sortHref("burn")} />
+        </div>
+
+        <ul className="divide-y divide-[var(--color-border)]">
+          {rows.map((r) => (
+            <BudgetCategoryCard key={r.category_id} row={r} transactions={monthTransactions} />
+          ))}
+        </ul>
       </div>
+    </div>
+  );
+}
+
+function SortHeader({
+  label,
+  href,
+  active,
+  dir,
+  align = "left",
+}: {
+  label: string;
+  href: string;
+  active: boolean;
+  dir: SortDir;
+  align?: "left" | "right";
+}) {
+  const arrow = active ? (dir === "desc" ? "↓" : "↑") : "";
+  return (
+    <Link
+      href={href}
+      className={`inline-flex items-center gap-1 font-normal hover:text-[var(--color-ink)] ${
+        align === "right" ? "justify-end" : ""
+      } ${active ? "text-[var(--color-ink)]" : ""}`}
+    >
+      {label}
+      {arrow && <span className="text-[10px]">{arrow}</span>}
+    </Link>
+  );
+}
+
+function MobileSortPill({
+  label,
+  href,
+  active,
+  dir,
+}: {
+  label: string;
+  href: string;
+  active: boolean;
+  dir: SortDir;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`shrink-0 rounded-full border px-3 py-1 text-xs whitespace-nowrap transition ${
+        active
+          ? "border-[var(--color-ink)] bg-[var(--color-ink)] text-white"
+          : "border-[var(--color-border)] bg-white text-[var(--color-muted)]"
+      }`}
+    >
+      {label} {active && (dir === "desc" ? "↓" : "↑")}
+    </Link>
+  );
+}
+
+function SummaryCard({
+  label,
+  value,
+  note,
+  tone = "neutral",
+}: {
+  label: string;
+  value: string;
+  note?: string;
+  tone?: "neutral" | "pos" | "neg";
+}) {
+  return (
+    <div className="min-w-0 rounded-xl border border-[var(--color-border)] bg-white p-3 md:p-5">
+      <div className="truncate text-[10px] md:text-xs uppercase tracking-wide text-[var(--color-muted)]">
+        {label}
+      </div>
+      <div
+        className={`mono mt-1 md:mt-2 truncate text-base md:text-2xl font-medium tabular-nums ${
+          tone === "neg" ? "text-[var(--color-neg)]" : tone === "pos" ? "text-[var(--color-pos)]" : ""
+        }`}
+      >
+        {value}
+      </div>
+      {note && (
+        <div className="mt-1 truncate text-[10px] md:text-xs text-[var(--color-muted)]">{note}</div>
+      )}
     </div>
   );
 }

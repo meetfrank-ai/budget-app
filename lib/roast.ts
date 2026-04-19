@@ -86,12 +86,12 @@ export async function generateBudgetCommentary(args: {
     const client = new Anthropic({ apiKey: key });
     const res = await client.messages.create({
       model: MODEL,
-      max_tokens: 500,
+      max_tokens: 90,
       system:
-        "You are Lynette's strategic finance friend reviewing her whole-month budget position. " +
-        "Write 4–6 sentences. Survey the month: what's tracking well, what's silently bleeding, where the plan vs. reality diverge. " +
-        "Be specific — name categories with rand amounts. Note when a category is consistently over or under (might mean the plan is wrong, not the spending). " +
-        "Tongue-in-cheek but more measured than the daily roast. No emoji. No warnings. ZAR (R).",
+        "You are Lynette's sassy-as-hell finance friend. " +
+        "Write EXACTLY 2 sentences, under 40 words total. " +
+        "Pick the ONE thing that matters most (worst overrun, silent leak, or surprise win) and say it. " +
+        "Sharp, blunt, a little mean. No equivocating, no 'consider', no hedging. No emoji. ZAR (R).",
       messages: [{ role: "user", content: prompt }],
     });
     const block = res.content[0];
