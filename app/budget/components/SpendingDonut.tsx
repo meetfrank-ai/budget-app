@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import type { BudgetCategory } from "@/lib/budget-adapter";
 import { zarRound } from "@/lib/format";
 
@@ -8,6 +11,7 @@ const OTHERS_COLOR = "#EEEDFE";
 
 type Segment = {
   key: string;
+  categoryId: string | null;
   name: string;
   amount: number;
   pct: number;
@@ -24,6 +28,7 @@ function buildSegments(categories: BudgetCategory[], totalActual: number): Segme
 
   const segs: Segment[] = top.map((c, i) => ({
     key: c.id,
+    categoryId: c.id,
     name: c.name,
     amount: c.actual,
     pct: totalActual > 0 ? (c.actual / totalActual) * 100 : 0,
@@ -32,6 +37,7 @@ function buildSegments(categories: BudgetCategory[], totalActual: number): Segme
   if (restTotal > 0) {
     segs.push({
       key: "__others",
+      categoryId: null,
       name: "All others",
       amount: restTotal,
       pct: totalActual > 0 ? (restTotal / totalActual) * 100 : 0,
@@ -42,6 +48,10 @@ function buildSegments(categories: BudgetCategory[], totalActual: number): Segme
   return segs;
 }
 
+function focusCategory(id: string) {
+  window.dispatchEvent(new CustomEvent("budget:focus-category", { detail: { id } }));
+}
+
 export function SpendingDonut({
   categories,
   totalActual,
@@ -49,7 +59,9 @@ export function SpendingDonut({
   categories: BudgetCategory[];
   totalActual: number;
 }) {
+  const [hovered, setHovered] = useState<string | null>(null);
   const segments = buildSegments(categories, totalActual);
+  const hoveredSeg = segments.find((s) => s.key === hovered) ?? null;
 
   let accumulated = 0;
   const svgSegments = segments.map((s) => {
@@ -82,33 +94,98 @@ export function SpendingDonut({
               r={RADIUS}
               fill="none"
               stroke={s.color}
-              strokeWidth="22"
+              strokeWidth={hovered === s.key ? 26 : 22}
               strokeDasharray={s.dashArray}
               strokeDashoffset={s.dashOffset}
               transform="rotate(-90 80 80)"
+              onMouseEnter={() => setHovered(s.key)}
+              onMouseLeave={() => setHovered(null)}
+              onClick={() => s.categoryId && focusCategory(s.categoryId)}
+              className={`transition-[stroke-width] duration-150 ${s.categoryId ? "cursor-pointer" : ""}`}
             />
           ))}
-          <text x="80" y="75" textAnchor="middle" fontSize="10" fill="var(--color-text-secondary)" letterSpacing="1">
-            SPENT
-          </text>
-          <text x="80" y="93" textAnchor="middle" fontSize="15" fill="var(--color-text-primary)" fontWeight="500" fontFamily="var(--font-mono)">
-            {zarRound(totalActual)}
-          </text>
+          {hoveredSeg ? (
+            <>
+              <text
+                x="80"
+                y="72"
+                textAnchor="middle"
+                fontSize="9"
+                fill="var(--color-text-secondary)"
+                letterSpacing="0.5"
+              >
+                {hoveredSeg.name.length > 16 ? hoveredSeg.name.slice(0, 15) + "…" : hoveredSeg.name}
+              </text>
+              <text
+                x="80"
+                y="92"
+                textAnchor="middle"
+                fontSize="14"
+                fill="var(--color-text-primary)"
+                fontWeight="500"
+                fontFamily="var(--font-mono)"
+              >
+                {zarRound(hoveredSeg.amount)}
+              </text>
+            </>
+          ) : (
+            <>
+              <text
+                x="80"
+                y="75"
+                textAnchor="middle"
+                fontSize="10"
+                fill="var(--color-text-secondary)"
+                letterSpacing="1"
+              >
+                SPENT
+              </text>
+              <text
+                x="80"
+                y="93"
+                textAnchor="middle"
+                fontSize="15"
+                fill="var(--color-text-primary)"
+                fontWeight="500"
+                fontFamily="var(--font-mono)"
+              >
+                {zarRound(totalActual)}
+              </text>
+            </>
+          )}
         </svg>
 
         <div className="w-full flex flex-col gap-1.5 mt-1">
-          {segments.map((s) => (
-            <div key={s.key} className="flex justify-between items-center text-[11px]">
-              <div className="flex items-center gap-[7px]">
-                <span
-                  className="w-2 h-2 rounded-[2px] shrink-0"
-                  style={{ background: s.color, border: s.border ? `0.5px solid ${s.border}` : undefined }}
-                />
-                <span className="text-[var(--color-text-primary)]">{s.name}</span>
-              </div>
-              <span className="mono text-[var(--color-text-secondary)]">{Math.round(s.pct)}%</span>
-            </div>
-          ))}
+          {segments.map((s) => {
+            const isHov = hovered === s.key;
+            return (
+              <button
+                key={s.key}
+                type="button"
+                onMouseEnter={() => setHovered(s.key)}
+                onMouseLeave={() => setHovered(null)}
+                onClick={() => s.categoryId && focusCategory(s.categoryId)}
+                className={`flex justify-between items-center text-[11px] text-left hover:opacity-100 transition ${
+                  s.categoryId ? "cursor-pointer" : "cursor-default"
+                } ${isHov ? "font-medium" : ""}`}
+                disabled={!s.categoryId}
+              >
+                <div className="flex items-center gap-[7px]">
+                  <span
+                    className="w-2 h-2 rounded-[2px] shrink-0"
+                    style={{
+                      background: s.color,
+                      border: s.border ? `0.5px solid ${s.border}` : undefined,
+                    }}
+                  />
+                  <span className="text-[var(--color-text-primary)]">{s.name}</span>
+                </div>
+                <span className="mono text-[var(--color-text-secondary)]">
+                  {Math.round(s.pct)}%
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>

@@ -1,5 +1,11 @@
+"use client";
+
 import type { BudgetCategory } from "@/lib/budget-adapter";
 import { zarRound } from "@/lib/format";
+
+function focusCategory(id: string) {
+  window.dispatchEvent(new CustomEvent("budget:focus-category", { detail: { id } }));
+}
 
 export function BiggestLeaks({ categories }: { categories: BudgetCategory[] }) {
   const leaks = categories
@@ -28,14 +34,18 @@ export function BiggestLeaks({ categories }: { categories: BudgetCategory[] }) {
       ) : (
         <div>
           {leaks.map((c, i) => (
-            <div
+            <button
               key={c.id}
-              className={`flex justify-between items-center py-[9px] ${
+              type="button"
+              onClick={() => focusCategory(c.id)}
+              className={`w-full flex justify-between items-center py-[9px] text-left hover:bg-[var(--color-surface-alt)] rounded px-1 -mx-1 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-brand-400)] ${
                 i < leaks.length - 1 ? "border-b border-[var(--color-border)]" : ""
               } ${i === 0 ? "pt-0" : ""}`}
             >
               <div>
-                <div className="text-[13px] font-medium text-[var(--color-text-primary)]">{c.name}</div>
+                <div className="text-[13px] font-medium text-[var(--color-text-primary)]">
+                  {c.name}
+                </div>
                 <div className="text-[10px] mt-0.5 tracking-[0.5px] text-[var(--color-danger)]">
                   {c.pct}% of plan
                 </div>
@@ -43,7 +53,7 @@ export function BiggestLeaks({ categories }: { categories: BudgetCategory[] }) {
               <div className="mono text-[13px] font-medium text-[var(--color-danger)] text-right">
                 −{zarRound(c.over)}
               </div>
-            </div>
+            </button>
           ))}
         </div>
       )}
