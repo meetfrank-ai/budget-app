@@ -1,6 +1,19 @@
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
+import { Geist, Geist_Mono } from "next/font/google";
+
+const geistSans = Geist({
+  subsets: ["latin"],
+  variable: "--font-geist-sans",
+  display: "swap",
+});
+
+const geistMono = Geist_Mono({
+  subsets: ["latin"],
+  variable: "--font-geist-mono",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Budget",
@@ -21,7 +34,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   viewportFit: "cover",
-  themeColor: "#0f172a",
+  themeColor: "#F4EEE4",
 };
 
 const nav = [
@@ -32,11 +45,11 @@ const nav = [
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body>
         <div className="min-h-dvh md:flex">
           {/* Desktop sidebar */}
-          <aside className="hidden md:block w-56 shrink-0 border-r border-[var(--color-border)] bg-white">
+          <aside className="hidden md:block w-56 shrink-0 border-r border-[var(--color-border)] bg-[var(--color-card)]">
             <div className="px-5 py-5 border-b border-[var(--color-border)]">
               <div className="text-sm font-semibold tracking-tight">Budget</div>
               <div className="text-xs text-[var(--color-muted)] mt-0.5">Lynette · 2026</div>
@@ -46,7 +59,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <Link
                   key={n.href}
                   href={n.href}
-                  className="block px-3 py-2 text-sm rounded hover:bg-[var(--color-bg)] text-[var(--color-ink)]"
+                  className="block px-3 py-2 text-sm rounded-lg hover:bg-[var(--color-bg)] text-[var(--color-ink)]"
                 >
                   {n.label}
                 </Link>
@@ -55,7 +68,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </aside>
 
           {/* Mobile top bar */}
-          <header className="md:hidden border-b border-[var(--color-border)] bg-white sticky top-0 z-10">
+          <header className="md:hidden border-b border-[var(--color-border)] bg-[var(--color-card)] sticky top-0 z-10">
             <div className="px-4 py-3 flex items-center justify-between">
               <div className="text-sm font-semibold tracking-tight">Budget</div>
               <div className="text-xs text-[var(--color-muted)]">Lynette</div>
@@ -65,7 +78,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <main className="flex-1 overflow-x-hidden pb-44 md:pb-0">{children}</main>
 
           {/* Mobile bottom tab bar — respects iPhone home indicator */}
-          <nav className="md:hidden fixed bottom-0 inset-x-0 border-t border-[var(--color-border)] bg-white/95 backdrop-blur z-10 pb-[env(safe-area-inset-bottom)]">
+          <nav className="md:hidden fixed bottom-0 inset-x-0 border-t border-[var(--color-border)] bg-[var(--color-card)]/95 backdrop-blur z-10 pb-[env(safe-area-inset-bottom)]">
             <div className="grid grid-cols-3">
               {nav.map((n) => (
                 <Link

@@ -1,23 +1,41 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
 
-  --color-ink: #0f172a;
-  --color-muted: #64748b;
-  --color-border: #e2e8f0;
-  --color-card: #ffffff;
-  --color-bg: #f8fafc;
+  /* Warm, Finexa-inspired palette */
+  --color-bg: #F4EEE4;           /* ivory page background */
+  --color-card: #FAF7F2;         /* card surface */
+  --color-surface-2: #FFFFFF;    /* raised surface / inputs */
 
-  --color-pos: #059669;
-  --color-neg: #dc2626;
-  --color-warn: #d97706;
+  --color-ink: #1C1B1F;          /* warm charcoal */
+  --color-muted: #8A8480;        /* warm gray */
+  --color-subtle: #B8B1A8;       /* faint gray */
+  --color-border: #E8DFD3;       /* soft taupe */
+
+  --color-pos: #4CA57C;          /* sage */
+  --color-neg: #D14862;          /* coral */
+  --color-warn: #E8A84A;         /* amber */
+
+  --color-accent: #6B4CE6;       /* violet */
+  --color-accent-soft: #EDE6FC;  /* lavender tint */
+
+  /* Pastel status chip tokens */
+  --chip-pos-bg: #E1F1E8;
+  --chip-pos-fg: #2E7A58;
+  --chip-neg-bg: #FCE1E7;
+  --chip-neg-fg: #A03048;
+  --chip-warn-bg: #FCEFD6;
+  --chip-warn-fg: #9B6B1F;
+  --chip-accent-bg: #EDE6FC;
+  --chip-accent-fg: #4A2EB4;
 }
 
 html, body {
   background: var(--color-bg);
   color: var(--color-ink);
+  font-family: var(--font-sans);
   min-height: 100dvh;
   /* Avoid iOS bounce-scroll showing white under the tab bar in standalone PWA. */
   overscroll-behavior-y: none;
@@ -31,12 +49,15 @@ body {
   padding-right: env(safe-area-inset-right);
 }
 
-.mono { font-family: var(--font-mono); }
+.mono {
+  font-family: var(--font-mono);
+  font-feature-settings: "tnum", "ss01";
+}
 
 /* Progress bar track + fill */
 .bar-track {
   position: relative;
-  background: var(--color-border);
+  background: rgba(28, 27, 31, 0.08);
   border-radius: 999px;
   height: 6px;
   overflow: hidden;
@@ -44,8 +65,25 @@ body {
 .bar-fill {
   height: 100%;
   background: var(--color-ink);
+  border-radius: 999px;
   transition: width 0.3s;
 }
 .bar-fill.warn  { background: var(--color-warn); }
 .bar-fill.over  { background: var(--color-neg); }
-.bar-fill.ok    { background: var(--color-pos); }
+.bar-fill.ok    { background: var(--color-ink); }
+
+/* Reusable pastel status chip */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+.chip.pos    { background: var(--chip-pos-bg);    color: var(--chip-pos-fg); }
+.chip.neg    { background: var(--chip-neg-bg);    color: var(--chip-neg-fg); }
+.chip.warn   { background: var(--chip-warn-bg);   color: var(--chip-warn-fg); }
+.chip.accent { background: var(--chip-accent-bg); color: var(--chip-accent-fg); }
