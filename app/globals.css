@@ -1,40 +1,47 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
 
-  /* Warm, Finexa-inspired palette */
-  --color-bg: #F4EEE4;           /* ivory page background */
-  --color-card: #FAF7F2;         /* card surface */
-  --color-surface-2: #FFFFFF;    /* raised surface / inputs */
+  /* Brand — violet, from Finexa-inspired spec */
+  --color-brand-50:  #EEEDFE;
+  --color-brand-100: #CECBF6;
+  --color-brand-200: #AFA9EC;
+  --color-brand-400: #7F77DD;
+  --color-brand-600: #534AB7;
+  --color-brand-800: #3C3489;
 
-  --color-ink: #1C1B1F;          /* warm charcoal */
-  --color-muted: #8A8480;        /* warm gray */
-  --color-subtle: #B8B1A8;       /* faint gray */
-  --color-border: #E8DFD3;       /* soft taupe */
+  /* Semantic */
+  --color-danger:    #A32D2D;
+  --color-danger-bg: rgba(226, 75, 74, 0.10);
+  --color-warning:   #BA7515;
+  --color-success:   #3B6D11;
 
-  --color-pos: #4CA57C;          /* sage */
-  --color-neg: #D14862;          /* coral */
-  --color-warn: #E8A84A;         /* amber */
+  /* Neutrals (light) */
+  --color-text-primary:   #0E0E0C;
+  --color-text-secondary: #6B6B66;
+  --color-text-tertiary:  #A8A7A0;
+  --color-surface:        #FFFFFF;
+  --color-surface-alt:    #F1EFE8;
+  --color-border:         rgba(0, 0, 0, 0.08);
 
-  --color-accent: #6B4CE6;       /* violet */
-  --color-accent-soft: #EDE6FC;  /* lavender tint */
-
-  /* Pastel status chip tokens */
-  --chip-pos-bg: #E1F1E8;
-  --chip-pos-fg: #2E7A58;
-  --chip-neg-bg: #FCE1E7;
-  --chip-neg-fg: #A03048;
-  --chip-warn-bg: #FCEFD6;
-  --chip-warn-fg: #9B6B1F;
-  --chip-accent-bg: #EDE6FC;
-  --chip-accent-fg: #4A2EB4;
+  /* Back-compat aliases for existing pages that still use the old token names.
+     Do not use these in new code — prefer the semantic names above. */
+  --color-bg:      #F1EFE8;
+  --color-card:    #FFFFFF;
+  --color-ink:     #0E0E0C;
+  --color-muted:   #6B6B66;
+  --color-subtle:  #A8A7A0;
+  --color-pos:     #3B6D11;
+  --color-neg:     #A32D2D;
+  --color-warn:    #BA7515;
+  --color-accent:  #7F77DD;
 }
 
 html, body {
-  background: var(--color-bg);
-  color: var(--color-ink);
+  background: var(--color-surface-alt);
+  color: var(--color-text-primary);
   font-family: var(--font-sans);
   min-height: 100dvh;
   /* Avoid iOS bounce-scroll showing white under the tab bar in standalone PWA. */
@@ -54,36 +61,29 @@ body {
   font-feature-settings: "tnum", "ss01";
 }
 
-/* Progress bar track + fill */
+/* Progress bar track + fill (used outside the dashboard). */
 .bar-track {
   position: relative;
-  background: rgba(28, 27, 31, 0.08);
+  background: var(--color-brand-50);
   border-radius: 999px;
   height: 6px;
   overflow: hidden;
 }
 .bar-fill {
   height: 100%;
-  background: var(--color-ink);
+  background: var(--color-brand-400);
   border-radius: 999px;
   transition: width 0.3s;
 }
-.bar-fill.warn  { background: var(--color-warn); }
-.bar-fill.over  { background: var(--color-neg); }
-.bar-fill.ok    { background: var(--color-ink); }
+.bar-fill.warn  { background: var(--color-warning); }
+.bar-fill.over  { background: var(--color-danger); }
+.bar-fill.ok    { background: var(--color-brand-400); }
 
-/* Reusable pastel status chip */
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 500;
-  line-height: 1.4;
+/* Respect user motion preferences across all animations. */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }
-.chip.pos    { background: var(--chip-pos-bg);    color: var(--chip-pos-fg); }
-.chip.neg    { background: var(--chip-neg-bg);    color: var(--chip-neg-fg); }
-.chip.warn   { background: var(--chip-warn-bg);   color: var(--chip-warn-fg); }
-.chip.accent { background: var(--chip-accent-bg); color: var(--chip-accent-fg); }

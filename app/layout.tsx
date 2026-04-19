@@ -1,18 +1,20 @@
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 
-const geistSans = Geist({
+const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-geist-sans",
+  variable: "--font-inter",
   display: "swap",
+  weight: ["400", "500"],
 });
 
-const geistMono = Geist_Mono({
+const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
-  variable: "--font-geist-mono",
+  variable: "--font-jetbrains-mono",
   display: "swap",
+  weight: ["400", "500"],
 });
 
 export const metadata: Metadata = {
@@ -34,7 +36,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   viewportFit: "cover",
-  themeColor: "#F4EEE4",
+  themeColor: "#F1EFE8",
 };
 
 const nav = [
@@ -45,21 +47,21 @@ const nav = [
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
+    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <body>
         <div className="min-h-dvh md:flex">
           {/* Desktop sidebar */}
-          <aside className="hidden md:block w-56 shrink-0 border-r border-[var(--color-border)] bg-[var(--color-card)]">
+          <aside className="hidden md:block w-56 shrink-0 border-r border-[var(--color-border)] bg-[var(--color-surface)]">
             <div className="px-5 py-5 border-b border-[var(--color-border)]">
-              <div className="text-sm font-semibold tracking-tight">Budget</div>
-              <div className="text-xs text-[var(--color-muted)] mt-0.5">Lynette · 2026</div>
+              <div className="text-sm font-medium tracking-tight">Budget</div>
+              <div className="text-xs text-[var(--color-text-secondary)] mt-0.5">Lynette · 2026</div>
             </div>
             <nav className="p-3 space-y-0.5">
               {nav.map((n) => (
                 <Link
                   key={n.href}
                   href={n.href}
-                  className="block px-3 py-2 text-sm rounded-lg hover:bg-[var(--color-bg)] text-[var(--color-ink)]"
+                  className="block px-3 py-2 text-sm rounded-lg hover:bg-[var(--color-surface-alt)] text-[var(--color-text-primary)]"
                 >
                   {n.label}
                 </Link>
@@ -68,23 +70,23 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </aside>
 
           {/* Mobile top bar */}
-          <header className="md:hidden border-b border-[var(--color-border)] bg-[var(--color-card)] sticky top-0 z-10">
+          <header className="md:hidden border-b border-[var(--color-border)] bg-[var(--color-surface)] sticky top-0 z-10">
             <div className="px-4 py-3 flex items-center justify-between">
-              <div className="text-sm font-semibold tracking-tight">Budget</div>
-              <div className="text-xs text-[var(--color-muted)]">Lynette</div>
+              <div className="text-sm font-medium tracking-tight">Budget</div>
+              <div className="text-xs text-[var(--color-text-secondary)]">Lynette</div>
             </div>
           </header>
 
           <main className="flex-1 overflow-x-hidden pb-44 md:pb-0">{children}</main>
 
           {/* Mobile bottom tab bar — respects iPhone home indicator */}
-          <nav className="md:hidden fixed bottom-0 inset-x-0 border-t border-[var(--color-border)] bg-[var(--color-card)]/95 backdrop-blur z-10 pb-[env(safe-area-inset-bottom)]">
+          <nav className="md:hidden fixed bottom-0 inset-x-0 border-t border-[var(--color-border)] bg-[var(--color-surface)]/95 backdrop-blur z-10 pb-[env(safe-area-inset-bottom)]">
             <div className="grid grid-cols-3">
               {nav.map((n) => (
                 <Link
                   key={n.href}
                   href={n.href}
-                  className="px-2 py-3 text-xs text-center text-[var(--color-ink)] active:bg-[var(--color-bg)]"
+                  className="px-2 py-3 text-xs text-center text-[var(--color-text-primary)] active:bg-[var(--color-surface-alt)]"
                 >
                   {n.label}
                 </Link>
