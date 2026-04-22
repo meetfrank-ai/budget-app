@@ -25,6 +25,10 @@ export type Transaction = {
   notes: string | null;
   is_subscription: boolean;
   reviewed_at: string | null;
+  is_split: boolean;
+  linked_to_id: string | null;
+  shared_with: string | null;
+  shared_pct: number | null;
 };
 
 export type DailyReview = {
@@ -86,7 +90,7 @@ async function fetchTransactions(opts?: {
   let q = sb
     .from("transactions")
     .select(
-      "id, occurred_on, occurred_time, description, category_id, amount_zar, currency, original_amount, tx_type, status, account_id, bank, notes, is_subscription, reviewed_at, categories(name), accounts(display_name)"
+      "id, occurred_on, occurred_time, description, category_id, amount_zar, currency, original_amount, tx_type, status, account_id, bank, notes, is_subscription, reviewed_at, is_split, linked_to_id, shared_with, shared_pct, categories(name), accounts(display_name)"
     )
     .eq("user_id", USER_ID)
     .order("occurred_on", { ascending: false })
@@ -111,6 +115,10 @@ async function fetchTransactions(opts?: {
     account_name: r.accounts?.display_name ?? null,
     amount_zar: Number(r.amount_zar),
     original_amount: r.original_amount ? Number(r.original_amount) : null,
+    is_split: !!r.is_split,
+    linked_to_id: r.linked_to_id ?? null,
+    shared_with: r.shared_with ?? null,
+    shared_pct: r.shared_pct == null ? null : Number(r.shared_pct),
   }));
 }
 
@@ -207,6 +215,41 @@ export const queries = {
       .eq("user_id", USER_ID);
     if (error) throw error;
     return data ?? [];
+  },
+
+  async sharedSummary(year: number, month: number) {
+    const sb = supabaseServer();
+    const start = `${year}-${String(month).padStart(2, "0")}-01`;
+    const next =
+      month === 12
+        ? `${year + 1}-01-01`
+        : `${year}-${String(month + 1).padStart(2, "0")}-01`;
+
+    const { data, error } = await sb
+      .from("transactions")
+      .select("shared_with, shared_pct, amount_zar, tx_type, status")
+      .eq("user_id", USER_ID)
+      .eq("status", "Completed")
+      .neq("tx_type", "Transfer")
+      .not("shared_with", "is", null)
+      .gte("occurred_on", start)
+      .lt("occurred_on", next);
+    if (error) throw error;
+
+    const byPerson = new Map<string, { total: number; theirShare: number }>();
+    for (const r of data ?? []) {
+      const name = (r.shared_with as string).trim();
+      if (!name) continue;
+      const amount = Number(r.amount_zar) * (r.tx_type === "Refund" ? -1 : 1);
+      const pct = r.shared_pct == null ? 0 : Number(r.shared_pct);
+      const cur = byPerson.get(name) ?? { total: 0, theirShare: 0 };
+      cur.total += amount;
+      cur.theirShare += (amount * pct) / 100;
+      byPerson.set(name, cur);
+    }
+    return Array.from(byPerson.entries())
+      .map(([name, v]) => ({ name, total: v.total, theirShare: v.theirShare }))
+      .sort((a, b) => b.theirShare - a.theirShare);
   },
 
   async todaySummary(year: number, month: number) {

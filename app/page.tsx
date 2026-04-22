@@ -125,10 +125,11 @@ async function OverviewState() {
   const year = now.getFullYear();
   const month = now.getMonth() + 1;
 
-  const [dr, budget, categories] = await Promise.all([
+  const [dr, budget, categories, shared] = await Promise.all([
     latestLockedReview(),
     queries.monthBudget(year, month),
     queries.categories(),
+    queries.sharedSummary(year, month),
   ]);
 
   if (!dr) {
@@ -209,6 +210,27 @@ async function OverviewState() {
         <div className="mt-6 rounded-xl border border-[var(--color-border)] bg-white p-5">
           <div className="text-sm leading-relaxed whitespace-pre-wrap">{dr.roast}</div>
         </div>
+      )}
+
+      {shared.length > 0 && (
+        <section className="mt-6 rounded-xl border border-[var(--color-border)] bg-white p-4">
+          <div className="text-xs uppercase tracking-wide text-[var(--color-muted)] mb-2">
+            Shared this month
+          </div>
+          <ul className="space-y-1.5">
+            {shared.map((s) => (
+              <li key={s.name} className="flex items-baseline justify-between text-sm">
+                <span>{s.name}</span>
+                <span className="mono text-xs text-[var(--color-muted)]">
+                  {zarRound(s.total)}{" "}
+                  <span className="text-[var(--color-ink)]">
+                    · their share {zarRound(s.theirShare)}
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       {/* Affected categories — where this locked day lands in the month */}
