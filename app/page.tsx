@@ -154,8 +154,9 @@ async function OverviewState() {
     .filter((b) => affectedIds.has(b.category_id))
     .sort((a, b) => (b.pct_used ?? 0) - (a.pct_used ?? 0));
 
-  const totalPlanned = budget.reduce((s, b) => s + b.planned, 0);
-  const totalActual = budget.reduce((s, b) => s + b.actual_net, 0);
+  const personalBudget = budget.filter((b) => b.category_kind !== "business");
+  const totalPlanned = personalBudget.reduce((s, b) => s + b.planned, 0);
+  const totalActual = personalBudget.reduce((s, b) => s + b.actual_net, 0);
   const monthPct = totalPlanned > 0 ? (totalActual / totalPlanned) * 100 : 0;
   const daysInMonth = new Date(year, month, 0).getDate();
   const dayOfMonth = now.getDate();

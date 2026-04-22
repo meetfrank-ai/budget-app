@@ -1,4 +1,4 @@
-import { queries, type Transaction } from "./queries";
+import { queries, type Transaction, type CategoryKind } from "./queries";
 import { generateBudgetCommentary } from "./roast";
 import { monthLabel } from "./format";
 
@@ -8,9 +8,10 @@ export type Budget = {
   daysInMonth: number;
   dayOfMonth: number;
   isCurrentMonth: boolean;
-  planned: number;
-  actual: number;
-  categories: BudgetCategory[];
+  planned: number;            // personal planned (hero/chart focus on personal)
+  actual: number;             // personal net
+  categories: BudgetCategory[];          // personal
+  businessCategories: BudgetCategory[];  // Frank, Gelato — spend-only, no charts
   dailyTotals: DailyTotal[];
   insight: string;
 };
@@ -18,6 +19,7 @@ export type Budget = {
 export type BudgetCategory = {
   id: string;
   name: string;
+  kind: CategoryKind;
   planned: number;
   actual: number;
   transactions: BudgetTx[];
@@ -92,7 +94,7 @@ export async function getBudget(monthStr: string | undefined): Promise<Budget> {
     byCategory.set(key, bucket);
   }
 
-  const categories: BudgetCategory[] = rows.map((row) => {
+  const allCategories: BudgetCategory[] = rows.map((row) => {
     const txs = (byCategory.get(row.category_id) ?? [])
       .slice()
       .sort((a, b) => {
@@ -108,16 +110,23 @@ export async function getBudget(monthStr: string | undefined): Promise<Budget> {
     return {
       id: row.category_id,
       name: row.category_name,
+      kind: row.category_kind,
       planned: row.planned,
       actual: row.actual_net,
       transactions: txs,
     };
   });
 
-  // Daily cumulative net spend from day 1 up to today (or last day of month if historical).
+  const categories = allCategories.filter((c) => c.kind !== "business");
+  const businessCategories = allCategories.filter((c) => c.kind === "business");
+
+  // Daily cumulative net spend — personal categories only, so the line chart
+  // and cash-flow story focus on personal runway.
+  const personalCategoryIds = new Set(categories.map((c) => c.id));
   const dayNet = new Array<number>(daysInMonth + 2).fill(0);
   for (const tx of monthTransactions) {
     if (tx.status !== "Completed" || tx.tx_type === "Transfer") continue;
+    if (tx.category_id && !personalCategoryIds.has(tx.category_id)) continue;
     const day = parseInt(tx.occurred_on.slice(8, 10));
     if (day < 1 || day > daysInMonth) continue;
     dayNet[day] += netSigned(tx);
@@ -134,7 +143,7 @@ export async function getBudget(monthStr: string | undefined): Promise<Budget> {
 
   const insight = isCurrentMonth
     ? await generateBudgetCommentary({
-        budget: rows,
+        budget: rows.filter((r) => r.category_kind !== "business"),
         monthName: monthLabel(year, month),
         daysInMonth,
         dayOfMonth,
@@ -150,6 +159,7 @@ export async function getBudget(monthStr: string | undefined): Promise<Budget> {
     planned: totalPlanned,
     actual: totalActual,
     categories,
+    businessCategories,
     dailyTotals,
     insight,
   };

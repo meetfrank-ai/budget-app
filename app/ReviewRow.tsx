@@ -54,8 +54,8 @@ export function ReviewRow({
             {tx.occurred_time ?? ""}
           </span>
           <div className="min-w-0">
-            <div className="font-medium text-sm truncate">{tx.description}</div>
-            <div className="text-xs text-[var(--color-muted)] mt-0.5 truncate">
+            <div className="font-medium text-sm break-words">{tx.description}</div>
+            <div className="text-xs text-[var(--color-muted)] mt-0.5 break-words">
               {tx.account_name}
             </div>
           </div>

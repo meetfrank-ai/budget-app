@@ -6,6 +6,7 @@ import { CashFlowChart } from "./components/CashFlowChart";
 import { SpendingDonut } from "./components/SpendingDonut";
 import { BiggestLeaks } from "./components/BiggestLeaks";
 import { CategoryTable } from "./components/CategoryTable";
+import { BusinessSection } from "./components/BusinessSection";
 import { InsightBanner } from "./components/InsightBanner";
 
 export const dynamic = "force-dynamic";
@@ -57,6 +58,8 @@ export default async function BudgetPage({
         <BiggestLeaks categories={budget.categories} />
         <CategoryTable categories={budget.categories} />
       </div>
+
+      <BusinessSection categories={budget.businessCategories} />
 
       <InsightBanner insight={budget.insight} />
     </div>

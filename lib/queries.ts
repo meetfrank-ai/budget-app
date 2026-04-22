@@ -35,9 +35,12 @@ export type DailyReview = {
   roast: string | null;
 };
 
+export type CategoryKind = "personal" | "business";
+
 export type BudgetRow = {
   category_id: string;
   category_name: string;
+  category_kind: CategoryKind;
   planned: number;
   actual_spend: number;
   actual_refund: number;
@@ -45,7 +48,13 @@ export type BudgetRow = {
   pct_used: number | null;
 };
 
-export type Category = { id: string; name: string; sort_order: number; color: string | null };
+export type Category = {
+  id: string;
+  name: string;
+  sort_order: number;
+  color: string | null;
+  kind: CategoryKind;
+};
 export type Subscription = {
   id: string;
   display_name: string;
@@ -112,19 +121,19 @@ export const queries = {
     const sb = supabaseServer();
     const { data, error } = await sb
       .from("categories")
-      .select("id, name, sort_order, color")
+      .select("id, name, sort_order, color, kind")
       .eq("user_id", USER_ID)
       .order("sort_order")
       .order("name");
     if (error) throw error;
-    return data ?? [];
+    return (data ?? []).map((r: any) => ({ ...r, kind: r.kind ?? "personal" }));
   },
 
   async monthBudget(year: number, month: number): Promise<BudgetRow[]> {
     const sb = supabaseServer();
     const { data, error } = await sb
       .from("v_month_budget")
-      .select("category_id, category_name, planned, actual_spend, actual_refund, actual_net, pct_used")
+      .select("category_id, category_name, category_kind, planned, actual_spend, actual_refund, actual_net, pct_used")
       .eq("user_id", USER_ID)
       .eq("year", year)
       .eq("month", month);
@@ -132,6 +141,7 @@ export const queries = {
     return (data ?? [])
       .map((r: any) => ({
         ...r,
+        category_kind: (r.category_kind ?? "personal") as CategoryKind,
         planned: Number(r.planned),
         actual_spend: Number(r.actual_spend),
         actual_refund: Number(r.actual_refund),
@@ -229,8 +239,9 @@ export const queries = {
         .filter((r) => r.status === "Completed" && r.tx_type !== "Transfer")
         .reduce((s, r) => s + Number(r.amount_zar) * (r.tx_type === "Refund" ? -1 : 1), 0);
 
-    const plannedThisMonth = budget.reduce((s, b) => s + b.planned, 0);
-    const netThisMonth = budget.reduce((s, b) => s + b.actual_net, 0);
+    const personalBudget = budget.filter((b) => b.category_kind !== "business");
+    const plannedThisMonth = personalBudget.reduce((s, b) => s + b.planned, 0);
+    const netThisMonth = personalBudget.reduce((s, b) => s + b.actual_net, 0);
 
     return {
       uncategorisedCount: uncat ?? 0,
