@@ -17,7 +17,7 @@
 
 const FNB_SENDER = "inContact@fnb.co.za";
 const DISCOVERY_SENDER = "no-reply@discovery.bank";
-const SYNC_LOOKBACK_DAYS = 3;     // pull last 3 days each run; dedup handles overlap
+const SYNC_LOOKBACK_DAYS = parseInt(process.env.LOOKBACK_DAYS ?? "", 10) || 7;
 
 // ────────────────────────────────────────────────────────────────────────────
 // Google OAuth — exchange refresh token for access token
@@ -368,6 +368,118 @@ function categorise(description, notes, rules) {
   return null;
 }
 
+function merchantKey(description) {
+  return description
+    .replace(/^Yoco\s*\*\s*/i, "")
+    .split(/\s+/)
+    .slice(0, 3)
+    .join(" ")
+    .toLowerCase();
+}
+
+/**
+ * For any row left with category_id === null, ask Claude to pick a category
+ * from the user's list. Inserts a category_rules row (source='ai_inferred',
+ * priority=20 so user_correction rules still win) for the merchant_key prefix
+ * so the same merchant is free next time.
+ *
+ * Cheap: one Claude call per unique unmatched merchant. ~$0.001 per call.
+ * Skipped silently if ANTHROPIC_API_KEY is not set.
+ */
+async function aiInferCategories(rows, categories) {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey || rows.length === 0) return 0;
+
+  // Group unmatched rows by merchant_key.
+  const byMerchant = new Map();
+  for (const r of rows) {
+    if (r.category_id) continue;
+    if (r.tx_type === "Transfer") continue; // transfers don't need a category
+    const key = merchantKey(r.description);
+    if (!byMerchant.has(key)) byMerchant.set(key, { example: r.description, rows: [] });
+    byMerchant.get(key).rows.push(r);
+  }
+  if (byMerchant.size === 0) return 0;
+
+  console.log(`[sync] AI-inferring categories for ${byMerchant.size} unique merchant(s)`);
+
+  const catList = categories.map((c) => `- ${c.name}`).join("\n");
+  const nameToId = Object.fromEntries(categories.map((c) => [c.name.toLowerCase(), c.id]));
+  let inferred = 0;
+  const newRules = [];
+
+  for (const [key, { example, rows: matchedRows }] of byMerchant) {
+    let pickedName = null;
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "claude-haiku-4-5",
+          max_tokens: 50,
+          system:
+            "You categorise South African personal transactions. " +
+            "Given a merchant description and a list of category names, return ONLY the single best-fit category name from the list. " +
+            "No prose, no quotes, no explanation — just the exact category name.",
+          messages: [
+            {
+              role: "user",
+              content: `Merchant: "${example}"\n\nCategories:\n${catList}\n\nReturn the category name.`,
+            },
+          ],
+        }),
+      });
+      const data = await res.json();
+      const text = (data?.content?.[0]?.text ?? "").trim();
+      pickedName = text.toLowerCase();
+    } catch (e) {
+      console.warn(`[sync] AI categorise failed for "${example}":`, e.message);
+      continue;
+    }
+
+    const categoryId = nameToId[pickedName];
+    if (!categoryId) {
+      console.warn(`[sync] AI returned unknown category "${pickedName}" for "${example}" — leaving uncategorised`);
+      continue;
+    }
+
+    // Apply to all matched rows
+    for (const r of matchedRows) r.category_id = categoryId;
+    inferred += matchedRows.length;
+
+    // Queue a category_rules insert so future syncs match without an API call
+    const pattern = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    newRules.push({
+      user_id: USER_ID,
+      pattern,
+      category_id: categoryId,
+      priority: 20,
+      source: "ai_inferred",
+      example_merchant: example,
+      is_active: true,
+    });
+  }
+
+  if (newRules.length > 0) {
+    try {
+      await fetch(`${SB_URL}/rest/v1/category_rules`, {
+        method: "POST",
+        headers: { ...SB_HEADERS, Prefer: "resolution=ignore-duplicates" },
+        body: JSON.stringify(newRules),
+      });
+    } catch (e) {
+      console.warn(`[sync] category_rules insert failed:`, e.message);
+    }
+  }
+
+  console.log(`[sync] AI inferred ${inferred} row(s) across ${newRules.length} new rule(s)`);
+  return inferred;
+}
+
 // ────────────────────────────────────────────────────────────────────────────
 // Main
 // ────────────────────────────────────────────────────────────────────────────
@@ -451,6 +563,8 @@ export async function runSync() {
 
   console.log(`[sync] parsed=${parsed} skipped=${skipped} errors=${errors}`);
 
+  const aiInferred = await aiInferCategories(rows, categories);
+
   let inserted = 0;
   if (rows.length > 0) {
     // Insert in chunks to avoid PostgREST size limits
@@ -460,9 +574,9 @@ export async function runSync() {
       inserted += Array.isArray(result) ? result.length : 0;
     }
   }
-  console.log(`[sync] inserted=${inserted} (dedup via unique(user_id,message_id))`);
+  console.log(`[sync] inserted=${inserted} aiInferred=${aiInferred} (dedup via unique(user_id,message_id))`);
 
-  return { parsed, skipped, errors, inserted };
+  return { parsed, skipped, errors, inserted, aiInferred };
 }
 
 // Allow running directly: `node cron/sync.mjs`
